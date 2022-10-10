@@ -2,6 +2,21 @@ from ply import lex
 import ply.yacc as yacc
 import logging
 
+# data = input("File name (ex. foo.txt): ")
+# lines = ''
+# with open(data) as text:
+#     for line in text:
+#         lines += line
+
+data = """def f(a:Int, b:Int):Int = { var c:Int;
+def g(a:Int, b:(Int)=>Int):Int = { b(a)
+} def h(c:Int):Int = {
+def g():Int = { c-b
+}
+g() }
+c = a+b;
+g(c,h) }"""
+
 # keywords tokens
 reserved = {
     'def': 'DEF',
@@ -96,129 +111,84 @@ def t_error(t):
     t.lexer.skip(1)
 
 
-# Input program to scan
-
-
-data = '''def f(a:Int, b:Int):Int = { var c:Int;
-def g(a:Int, b:(Int)=>Int):Int = { b(a)
-}def h(c:Int):Int = {
-def g():Int = { c-b 
-}
-g() }
-c = a+b;
-g(c,h) }'''
-lexer = lex.lex()
-lexer.input(data)
-
-precedence = (
-    ('nonassoc', 'LT', 'GT'),  # Nonassociative operators
-    ('left', 'PLUS', 'MINUS'),
-    ('left', 'STAR', 'SLASH'),
-)
+# Parser
 
 
 def p_defdefs(p):
     """defdefs : defdef defdefs
                | defdef"""
-    print("defdefs" + list(p).__str__())
     pass
 
 
 def p_defdef(p):
     """defdef : DEF ID LPAREN parmsopt RPAREN COLON type BECOMES LBRACE vardefsopt defdefsopt expras RBRACE"""
-    print("defdef" + list(p).__str__())
     pass
 
 
 def p_parmsopt(p):
     """parmsopt : parms
                 | """
-    # print("parmsopt" + list(p).__str__())
-    if len(p) != 1:
-        p[0] = p[1]
     pass
 
 
 def p_parms(p):
     """parms : vardef COMMA parms
-             | vardef """
-    # print("parms" + list(p).__str__())
-    p[0] = p[1]
+             | vardef"""
     pass
 
 
 def p_vardef(p):
     """vardef : ID COLON type"""
-    # print("vardef" + list(p).__str__())
-    p[0] = p[1]
     pass
 
 
 def p_type(p):
     """type : INT
             | LPAREN typesopt RPAREN ARROW type"""
-    # print("type" + list(p).__str__())
-    p[0] = p[1]
     pass
 
 
 def p_typesopt(p):
     """typesopt : types
                 | """
-    print("typesopt" + list(p).__str__())
     pass
 
 
 def p_types(p):
     """types : type COMMA types
              | """
-
-    print("types" + list(p).__str__())
     pass
 
 
 def p_vardefsopt(p):
     """vardefsopt : VAR vardef SEMI vardefsopt
                   | """
-    # print("p_vardefsopt" + list(p).__str__())
-    if len(p) != 1:
-        p[0] = p[2]
     pass
 
 
 def p_defdefsopt(p):
     """defdefsopt : defdefs
                   | """
-    print("defdefsopt" + list(p).__str__())
     pass
 
 
 def p_expras(p):
     """expras : expra SEMI expras
                 | expra"""
-    print("Expras" + list(p).__str__())
     pass
 
 
 def p_expra(p):
-    """expra : expr
-             | ID BECOMES expr"""
-
-    print("Expra" + list(p).__str__())
+    """expra : ID BECOMES expr
+             | expr"""
     pass
 
 
 def p_expr(p):
-    """expr : expr PLUS term
-            | expr MINUS term
-            | term"""
-    print("expr" + list(p).__str__())
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        match p[2]:
-            case '+': p[0] = p[1] + p[3]
-            case '-': p[0] = p[1] - p[3]
+    """expr : IF LPAREN test RPAREN LBRACE expras RBRACE ELSE LBRACE expras RBRACE
+            | term
+            | expr PLUS term
+            | expr MINUS term"""
     pass
 
 
@@ -227,17 +197,6 @@ def p_term(p):
             | term STAR factor
             | term SLASH factor
             | term PCT factor"""
-    # print("term" + list(p).__str__())
-
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        match p[2]:
-            case '*': p[0] = p[1] * p[3]
-            case '/': p[0] = p[1] / p[3]
-            case '%': p[0] = p[1] % p[3]
-
-
     pass
 
 
@@ -246,11 +205,7 @@ def p_factor(p):
               | NUM
               | LPAREN expr RPAREN
               | factor LPAREN argsopt RPAREN"""
-    # print("factor" + list(p).__str__())
-    if len(p) == 2:
-        p[0] = p[1]
-    elif len(p) == 4:
-        p[0] = p[3]
+    pass
 
 
 def p_test(p):
@@ -260,29 +215,30 @@ def p_test(p):
             | expr GE expr
             | expr GT expr
             | expr EQ expr"""
-    print("test" + list(p).__str__())
-
+    pass
 
 
 def p_argsopt(p):
     """argsopt : args
                | """
-    print("argsopt" + list(p).__str__())
     pass
 
 
 def p_args(p):
     """args : expr COMMA args
             | expr"""
-    print("args" + list(p).__str__())
-
+    pass
 
 
 def p_error(p):
-    print(f"Syntax error {p}")
+    if p:
+         print("Syntax error at token", p.type)
+         # Just discard the token and tell the parser it's okay.
+         parser.errok()
+    else:
+         print("Syntax error at EOF")
 
 
-# Set up a logging object
 logging.basicConfig(
     level=logging.DEBUG,
     filename="parse-log.txt",
@@ -290,6 +246,9 @@ logging.basicConfig(
     format="%(filename)10s:%(lineno)4d:%(message)s"
 )
 log = logging.getLogger()
+
+lexer = lex.lex()
+lexer.input(data)
 
 parser = yacc.yacc(debug=True, debuglog=log)
 parser.parse(data, debug=log)
